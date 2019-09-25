@@ -82,6 +82,13 @@
         (is (= :incorrect (:anomaly (ex-data ex))))
         (is (string/starts-with?
               (.getMessage ex)
+              "Event params do not meet spec:"))))
+    (try
+      (tada/do! :foobar {:b 5})
+      (catch clojure.lang.ExceptionInfo ex
+        (is (= :incorrect (:anomaly (ex-data ex))))
+        (is (string/starts-with?
+              (.getMessage ex)
               "Event params do not meet spec:")))))
   (testing "Calling event with params violating conditions throws"
     (try
