@@ -21,18 +21,22 @@
     {:name :tada/events
      :spec {keyword? :tada/event}}))
 
+(defn- make-event-spec
+  [event]
+  (ds/spec {:name (keyword "ev-spec" (name (event :id)))
+            :spec (event :params)}))
+
 (defn register-events!
   [evs]
   {:pre [(every? (partial s/valid? :tada/event) evs)]
    :post [(s/valid? :tada/events @events)]}
-  (reset! events
-          (->> evs
-               (map (fn [evt]
-                      [(evt :id)
-                       (assoc evt :params-spec
-                              (ds/spec {:name (keyword "ev-spec" (name (evt :id)))
-                                        :spec (evt :params)}))]))
-               (into {}))))
+  (reset!
+    events
+    (into {}
+          (comp
+            (map (fn [evt] (assoc evt :params-spec (make-event-spec evt))))
+            (map (juxt :id identity)))
+          evs)))
 
 (defn- sanitize-params
   "Given a params-spec and params,
