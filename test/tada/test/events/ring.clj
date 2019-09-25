@@ -51,7 +51,11 @@
         (is (= 400
                (:status (handler {:params {:name "user-thing"}}))))
         (is (= 400
-               (:status (handler {:params {:value 5}}))))))))
+               (:status (handler {:params {:value 5}}))))
+
+        (is (= [{:name "user-thing" :value 5}
+                {:name "system-thing" :value 0}]
+               @db))))))
 
 (deftest routing-with-reitit
   (let [db (atom [])]
@@ -109,4 +113,8 @@
         (is (= 400
                (:status (app {:request-method :post
                               :uri "/api/event"
-                              :params {:value 5}}))))))))
+                              :params {:value 5}}))))
+
+        (is (= [{:name "user-thing" :value 5}
+                {:name "system-thing" :value 0}]
+               @db))))))
