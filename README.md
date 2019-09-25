@@ -6,6 +6,7 @@ Basic usage looks like this:
 
 ```clojure
 ;; Register our events
+(require '[tada.events.core :as tada])
 (tada/register-events!
     [{:id :foobar
       :params {:a string?
@@ -28,4 +29,33 @@ Basic usage looks like this:
 (tada/do! :foobar {:a "aoeu" :b 3}) ;; error: "B must be even"
 (tada/do! :foobar {:a "foo" :b 2}) ;; error: "A must start with 'a'"
 (tada/do! :foobar {:a "aoeu"}) ;; error: [:b]: :missing-key
+```
+
+Using `tada` with `reitit` for routing:
+
+```clojure
+(require '[tada.events.core :as tada])
+(require '[tada.events.core :as tada-ring])
+(require '[reitit.ring :as ring])
+
+(def db (atom []))
+
+(tada/register-events!
+  [{:id :add-event!
+    :params {:name string?
+             :value integer?}
+    :conditions (fn [{:keys [name value]}]
+                  [[(or (string/starts-with? name "user-")
+                        (string/starts-with? name "system-"))
+                    :incorrect
+                    "Even name must begin with 'user-' or 'system-'"]
+                   [(<= 0 value) :incorrect "Value must be positive"]])
+    :effect (fn [{:keys [name value] :as arg}]
+              (swap! db conj arg))}])
+
+(def app (ring/ring-handler
+           (ring/router
+             ["/api"
+              ["/event"
+               {:post {:handler (tada-ring/route :add-event!)}}]])))
 ```
