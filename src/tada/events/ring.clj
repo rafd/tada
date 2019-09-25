@@ -1,6 +1,6 @@
 (ns tada.events.ring
   (:require
-    [tada.core :as tada]))
+    [tada.events.core :as tada]))
 
 (defn route [ev-id]
   (fn [request]
