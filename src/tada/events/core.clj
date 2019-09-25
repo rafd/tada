@@ -7,13 +7,30 @@
 
 (defonce events (atom {}))
 
+;; Providing spec for documentation purposes, but not hooking it up
+;; since it tries to generative test the functions, which isn't
+;; necessarily always desired; additionally, we also know that the
+;; condition function will always get input that corresponds to the
+;; params spec, but that spec isn't created until after being checked
+;; against this
+(s/def :tada/condition-fn
+  (ds/spec
+    {:name :tada/condition-fn
+     :spec (s/fspec
+             :args (s/cat :arg map?)
+             :ret (s/coll-of
+                    (s/cat
+                      :status boolean?
+                      :anomaly keyword?
+                      :message string?)))}))
+
 (s/def :tada/event
   (ds/spec
     {:name :tada/event
      :spec {:params {keyword? (ds/or {:keyword keyword?
                                       :fn fn?
                                       :spec s/spec?})}
-            :conditions fn? ;; must return array of true/false
+            :conditions fn? ;; :tada/condition-fn
             :effect fn?}}))
 
 (s/def :tada/events
