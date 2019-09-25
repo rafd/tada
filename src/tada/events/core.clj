@@ -7,24 +7,31 @@
 
 (defonce events (atom {}))
 
+(s/def :tada/event
+  (ds/spec
+    {:name :tada/event
+     :spec {:params {keyword? (ds/or {:keyword keyword?
+                                      :fn fn?
+                                      :spec s/spec?})}
+            :conditions fn? ;; must return array of true/false
+            :effect fn?}}))
+
 (s/def :tada/events
   (ds/spec
     {:name :tada/events
-     :spec {keyword? {:params {keyword? (ds/or {:keyword keyword?
-                                                :fn fn?
-                                                :spec s/spec?})}
-                      :conditions fn? ;; must return array of true/false
-                      :effect fn?}}}))
+     :spec {keyword? :tada/event}}))
 
 (defn register-events!
   [evs]
-  {:pre [(s/valid? :tada/events evs)]}
+  {:pre [(every? (partial s/valid? :tada/event) evs)]
+   :post [(s/valid? :tada/events @events)]}
   (reset! events
           (->> evs
-               (map (fn [[k v]]
-                      [k (assoc v :params-spec
-                                (ds/spec {:name (keyword "ev-spec" (name k))
-                                          :spec (v :params)}))]))
+               (map (fn [evt]
+                      [(evt :id)
+                       (assoc evt :params-spec
+                              (ds/spec {:name (keyword "ev-spec" (name (evt :id)))
+                                        :spec (evt :params)}))]))
                (into {}))))
 
 (defn- sanitize-params
