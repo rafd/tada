@@ -1,8 +1,33 @@
-# TADA
+# tada
 
-A Clojure library for declarative events.
+tada is a clojure(script) library that helps you compose web-applications out of declarative data-driven parts.
 
-## Example
+tada consists of two things:
+
+  - A declarative, data-driven syntax for describing the necessary pieces that make up an applications domain model.
+    This includes:
+      - entities
+      - events
+      - constraints
+      - data-views
+      - permissions
+
+  - A collection of community-curated *conversion utilities* to help you turn these declerative descriptions into an actual running system
+
+## status
+
+This library is pre-alpha, and at this stage, is meant mostly for something to discuss around.
+
+There's not even an official release yet. (To hack on it, clone it, lein-install it and use checkouts.)
+
+The "API"/syntax is likely to change a lot, but once it stabilises, we'll cut an alpha release.
+
+So far, only events have been somewhat implemented.
+
+
+## tada.events
+
+### example
 
 ```clojure
 (ns bank.core
@@ -116,12 +141,12 @@ A Clojure library for declarative events.
 
 ```
 
-## Event manipulation
+### event manipulation
 
 Given a set of events, tada has a number of utilities to generate useful functions (or other artefacts)
 to pass off to other systems.
 
-## events -> ring-handlers
+#### events -> ring-handlers
 
 `tada.events.ring` can be used to generate ring-handlers from events.
 These handlers convert the anomaly in the events to the appropriate status code.
