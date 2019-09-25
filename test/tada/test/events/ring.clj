@@ -85,4 +85,28 @@
                               :value 0}})))
         (is (= [{:name "user-thing" :value 5}
                 {:name "system-thing" :value 0}]
-               @db))))))
+               @db)))
+
+      (testing "Bad requests fail"
+        (is (= 400
+               (:status (app {:request-method :post
+                              :uri "/api/event"
+                              :params {:name "beep"
+                                       :value 1}}))))
+        (is (= 400
+               (:status (app {:request-method :post
+                              :uri "/api/event"
+                              :params {:name "system-beep"
+                                       :value -1}}))))
+        (is (= 400
+               (:status (app {:request-method :post
+                              :uri "/api/event"
+                              :params {:beep 1 :boop "aoeu"}}))))
+        (is (= 400
+               (:status (app {:request-method :post
+                              :uri "/api/event"
+                              :params {:name "user-thing"}}))))
+        (is (= 400
+               (:status (app {:request-method :post
+                              :uri "/api/event"
+                              :params {:value 5}}))))))))
