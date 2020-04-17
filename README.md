@@ -59,7 +59,9 @@ So far, only events have been somewhat implemented.
 
 ;; and some database functions:
 
-(defn transfer! [from-account-id to-account-id amount])
+(defn get-account [account-id] ...)
+
+(defn transfer! [from-account-id to-account-id amount] ...)
 
 (defn deposit! [account-id amount])
 
@@ -87,18 +89,22 @@ So far, only events have been somewhat implemented.
        [[(user-exists? user-id) :forbidden "User with this id does not exist"]
         [(account-exists? account-id) :not-found "Account with this id does not exist"]
         [(user-owns-account? user-id account-id) :forbidden "User does not own this account"]
-        [(= currency (:currency (get-account account-id)) :incorrect "Deposit currency must match account"]])
+        [(= currency (:currency (get-account account-id))) :incorrect "Deposit currency must match account"]])
 
     :effect
     (fn [{:keys [account-id amount]}]
-       (deposit! account-id amount))}
+       (deposit! account-id amount))
+
+    :return
+    (fn [{:keys [account-id]}]
+      (get-account account-id))}
 
    {:id :transfer!
 
     :params {:user-id :bank.user/id
              :from-account-id :bank.account/id
              :to-account-id :bank.account/id
-             :amount (and integer? pos?)})}
+             :amount (and integer? pos?)}
 
     :conditions
     (fn [{:keys [user-id from-account-id to-account-id amount]}]
@@ -107,11 +113,12 @@ So far, only events have been somewhat implemented.
         [(user-owns-account? user-id from-account-id) :forbidden "User does not own this account"]
         [(account-exists? from-account-id) :incorrect "Account with this id does not exist"]
         [(>= (:balance (get-account from-account-id)) amount) :conflict "Insufficient funds in account"]
-        [(= (:currency (get-account from-account-id)
-            (:currency (get-account to-account-id)) :conflict "Currency of accounts must match"]])
+        [(= (:currency (get-account from-account-id))
+            (:currency (get-account to-account-id))) :conflict "Currency of accounts must match"]])
 
-    :effect (fn [{:keys [from-account-id to-account-id amount]}]
-               (transfer! from-account-id to-account-id amount)}]}])
+    :effect
+    (fn [{:keys [from-account-id to-account-id amount]}]
+      (transfer! from-account-id to-account-id amount))}])
 
 
 ;; register our events

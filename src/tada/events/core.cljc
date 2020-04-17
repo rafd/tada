@@ -32,7 +32,8 @@
                                       :fn fn?
                                       :spec s/spec?})}
             :conditions fn? ;; :tada/condition-fn
-            :effect fn?}}))
+            (ds/opt :effect) fn?
+            (ds/opt :return) fn?}}))
 
 (s/def :tada/events
   (ds/spec
@@ -101,8 +102,11 @@
       (let [errors (rule-errors ev sanitized-params)]
         (if (empty? errors)
           (do
-            ((ev :effect) sanitized-params)
-            true)
+            (when (ev :effect)
+              ((ev :effect) sanitized-params))
+            (if (ev :return)
+              ((ev :return) sanitized-params)
+              nil))
           (throw (ex-info (str "Event conditions are not met:\n"
                                (string/join "\n" (map :message errors)))
                           {:anomaly :incorrect}))))
