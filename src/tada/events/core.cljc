@@ -3,6 +3,7 @@
     [clojure.spec.alpha :as s]
     [clojure.string :as string]
     [clojure.core.match :as match]
+    [spec-tools.core :as st]
     [spec-tools.data-spec :as ds]))
 
 (defonce events (atom {}))
@@ -55,15 +56,21 @@
             (map (juxt :id identity)))
           evs)))
 
+(def transformer
+  (st/type-transformer
+    st/string-transformer
+    st/strip-extra-keys-transformer
+    st/strip-extra-values-transformer))
+
 (defn- sanitize-params
   "Given a params-spec and params,
    if the params pass the spec, returns the params
-     (eliding any extra keys)
+     (eliding any extra keys and values)
    if params do not pass spec, returns nil"
   [ev params]
-  (when (s/valid? (ev :params-spec) params)
-    ;; TODO make use of spec shape to do a deep filter
-    (select-keys params (keys (ev :params)))))
+  (let [coerced-params (st/coerce (ev :params-spec) params transformer)]
+    (when (s/valid? (ev :params-spec) coerced-params)
+      coerced-params)))
 
 (defn- rule-errors
   "Returns boolean of whether the the conditions for an event are satisfied.
