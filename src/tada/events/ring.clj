@@ -15,4 +15,7 @@
                    :incorrect 400
                    :forbidden 403
                    :unsupported 405
-                   :not-found 404)}))))
+                   :not-found 404
+                   ;; if no anomaly (usually do to event :effect or :return throwing)
+                   ;; rethrow the exception
+                   (throw e))}))))
