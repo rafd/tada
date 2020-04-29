@@ -6,7 +6,7 @@
     [spec-tools.core :as st]
     [spec-tools.data-spec :as ds]))
 
-(defonce events (atom {}))
+(defonce event-store (atom {}))
 
 ;; Providing spec for documentation purposes, but not hooking it up
 ;; since it tries to generative test the functions, which isn't
@@ -46,16 +46,16 @@
             :spec (event :params)}))
 
 (defn register-events!
-  [evs]
-  {:pre [(every? (partial s/valid? :tada/event) evs)]
-   :post [(s/valid? :tada/events @events)]}
+  [events]
+  {:pre [(every? (partial s/valid? :tada/event) events)]
+   :post [(s/valid? :tada/events @event-store)]}
   (reset!
-    events
+    event-store
     (into {}
           (comp
-            (map (fn [evt] (assoc evt :params-spec (make-event-spec evt))))
+            (map (fn [event] (assoc event :params-spec (make-event-spec event))))
             (map (juxt :id identity)))
-          evs)))
+          events)))
 
 (def transformer
   (st/type-transformer
@@ -68,16 +68,16 @@
    if the params pass the spec, returns the params
      (eliding any extra keys and values)
    if params do not pass spec, returns nil"
-  [ev params]
-  (let [coerced-params (st/coerce (ev :params-spec) params transformer)]
-    (when (s/valid? (ev :params-spec) coerced-params)
+  [event params]
+  (let [coerced-params (st/coerce (event :params-spec) params transformer)]
+    (when (s/valid? (event :params-spec) coerced-params)
       coerced-params)))
 
 (defn- rule-errors
   "Returns boolean of whether the the conditions for an event are satisfied.
    Should be called with sanitized-params."
-  [ev sanitized-params]
-  (->> ((ev :conditions) sanitized-params)
+  [event sanitized-params]
+  (->> ((event :conditions) sanitized-params)
        (remove (fn [[pass? _ _]] pass?))
        (map (fn [[pass? anomaly message]]
               {:anomaly anomaly
@@ -96,23 +96,23 @@
               (str key-path " " issue)))
        (string/join "\n")))
 
-(defn do! [ev-id params]
-  (if-let [ev (@events ev-id)]
-    (if-let [sanitized-params (sanitize-params ev params)]
-      (let [errors (rule-errors ev sanitized-params)]
+(defn do! [event-id params]
+  (if-let [event (@event-store event-id)]
+    (if-let [sanitized-params (sanitize-params event params)]
+      (let [errors (rule-errors event sanitized-params)]
         (if (empty? errors)
-          (do
-            (when (ev :effect)
-              ((ev :effect) sanitized-params))
-            (if (ev :return)
-              ((ev :return) sanitized-params)
+          (let [effect-return (when (event :effect)
+                                ((event :effect) sanitized-params))]
+            (if (event :return)
+              ((event :return) (assoc sanitized-params
+                                      :tada/effect-return effect-return))
               nil))
-          (throw (ex-info (str "Event conditions are not met:\n"
+          (throw (ex-info (str "Conditions for event " event-id " are not met:\n"
                                (string/join "\n" (map :message errors)))
                           {:anomaly :incorrect}))))
-      (throw (ex-info (str "Event params do not meet spec:\n"
-                           (explain-params-errors (ev :params-spec) params))
-               {:anomaly :incorrect})))
-    (throw (ex-info (str "No event with id " ev-id)
-                    {:event-id ev-id
+      (throw (ex-info (str "Params for event " event-id " do not meet spec:\n"
+                           (explain-params-errors (event :params-spec) params))
+                      {:anomaly :incorrect})))
+    (throw (ex-info (str "No event with id " event-id)
+                    {:event-id event-id
                      :anomaly :unsupported}))))
