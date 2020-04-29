@@ -49,13 +49,10 @@
   [events]
   {:pre [(every? (partial s/valid? :tada/event) events)]
    :post [(s/valid? :tada/events @event-store)]}
-  (reset!
-    event-store
-    (into {}
-          (comp
-            (map (fn [event] (assoc event :params-spec (make-event-spec event))))
-            (map (juxt :id identity)))
-          events)))
+  (swap! event-store merge (->> events
+                                (map (fn [event]
+                                       [(event :id) (assoc event :params-spec (make-event-spec event))]))
+                                (into {}))))
 
 (def transformer
   (st/type-transformer
