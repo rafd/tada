@@ -123,7 +123,7 @@ So far, only events have been somewhat implemented.
 
 ;; register our events
 
-(tada/register-events! events)
+(tada/register! events)
 
 ;; and then we can dispatch them with do!
 

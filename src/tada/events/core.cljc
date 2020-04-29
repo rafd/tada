@@ -45,7 +45,7 @@
   (ds/spec {:name (keyword "ev-spec" (name (event :id)))
             :spec (event :params)}))
 
-(defn register-events!
+(defn register!
   [events]
   {:pre [(every? (partial s/valid? :tada/event) events)]
    :post [(s/valid? :tada/events @event-store)]}
