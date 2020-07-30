@@ -1,10 +1,10 @@
 (ns tada.events.core
   (:require
-    [clojure.spec.alpha :as s]
-    [clojure.string :as string]
-    [clojure.core.match :as match]
-    [spec-tools.core :as st]
-    [spec-tools.data-spec :as ds]))
+   [clojure.spec.alpha :as s]
+   [clojure.string :as string]
+   [clojure.core.match :as match]
+   [spec-tools.core :as st]
+   [spec-tools.data-spec :as ds]))
 
 (defonce event-store (atom {}))
 
@@ -16,29 +16,29 @@
 ;; against this
 (s/def :tada/condition-fn
   (ds/spec
-    {:name :tada/condition-fn
-     :spec (s/fspec
-             :args (s/cat :arg map?)
-             :ret (s/coll-of
-                    (s/cat
-                      :status boolean?
-                      :anomaly keyword?
-                      :message string?)))}))
+   {:name :tada/condition-fn
+    :spec (s/fspec
+           :args (s/cat :arg map?)
+           :ret (s/coll-of
+                 (s/cat
+                  :status boolean?
+                  :anomaly keyword?
+                  :message string?)))}))
 
 (s/def :tada/event
   (ds/spec
-    {:name :tada/event
-     :spec {:params {keyword? (ds/or {:keyword keyword?
-                                      :fn fn?
-                                      :spec s/spec?})}
-            :conditions fn? ;; :tada/condition-fn
-            (ds/opt :effect) fn?
-            (ds/opt :return) fn?}}))
+   {:name :tada/event
+    :spec {:params {keyword? (ds/or {:keyword keyword?
+                                     :fn fn?
+                                     :spec s/spec?})}
+           :conditions fn? ;; :tada/condition-fn
+           (ds/opt :effect) fn?
+           (ds/opt :return) fn?}}))
 
 (s/def :tada/events
   (ds/spec
-    {:name :tada/events
-     :spec {keyword? :tada/event}}))
+   {:name :tada/events
+    :spec {keyword? :tada/event}}))
 
 (defn- make-event-spec
   [event]
@@ -56,9 +56,9 @@
 
 (def transformer
   (st/type-transformer
-    st/string-transformer
-    st/strip-extra-keys-transformer
-    st/strip-extra-values-transformer))
+   st/string-transformer
+   st/strip-extra-keys-transformer
+   st/strip-extra-values-transformer))
 
 (defn- sanitize-params
   "Given a params-spec and params,
@@ -85,10 +85,10 @@
        ::s/problems
        (map (fn [{:keys [path pred val via in]}]
               (match/match [pred]
-                           [([fn [_] ([contains? _ missing-key] :seq)] :seq)] {:issue :missing-key
-                                                                               :key-path (conj path missing-key)}
-                           [_] {:issue :incorrect-value
-                                :key-path path})))
+                [([fn [_] ([contains? _ missing-key] :seq)] :seq)] {:issue :missing-key
+                                                                    :key-path (conj path missing-key)}
+                [_] {:issue :incorrect-value
+                     :key-path path})))
        (map (fn [{:keys [issue key-path]}]
               (str key-path " " issue)))
        (string/join "\n")))
