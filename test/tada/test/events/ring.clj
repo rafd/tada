@@ -8,15 +8,15 @@
 
 (defn- event-fixture
   [f]
-  (reset! tada/events {})
+  (reset! tada/event-store {})
   (f)
-  (reset! tada/events {}))
+  (reset! tada/event-store {}))
 
 (use-fixtures :each event-fixture)
 
 (deftest requesting-events
   (let [db (atom [])]
-    (tada/register-events!
+    (tada/register!
       [{:id :add-event!
         :params {:name string?
                  :value integer?}
@@ -59,7 +59,7 @@
 
 (deftest routing-with-reitit
   (let [db (atom [])]
-    (tada/register-events!
+    (tada/register!
       [{:id :add-event!
         :params {:name string?
                  :value integer?}
