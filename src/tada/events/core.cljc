@@ -31,7 +31,7 @@
     :spec {:params {keyword? (ds/or {:keyword keyword?
                                      :fn fn?
                                      :spec s/spec?})}
-           :conditions fn? ;; :tada/condition-fn
+           (ds/opt :conditions) fn? ;; :tada/condition-fn
            (ds/opt :effect) fn?
            (ds/opt :return) fn?}}))
 
@@ -74,11 +74,13 @@
   "Returns boolean of whether the the conditions for an event are satisfied.
    Should be called with sanitized-params."
   [event sanitized-params]
-  (->> ((event :conditions) sanitized-params)
-       (remove (fn [[pass? _ _]] pass?))
-       (map (fn [[pass? anomaly message]]
-              {:anomaly anomaly
-               :message message}))))
+  (if (nil? (event :conditions))
+    []
+    (->> ((event :conditions) sanitized-params)
+         (remove (fn [[pass? _ _]] pass?))
+         (map (fn [[pass? anomaly message]]
+                {:anomaly anomaly
+                 :message message})))))
 
 (defn explain-params-errors [spec value]
   (->> (s/explain-data spec value)
