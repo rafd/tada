@@ -29,8 +29,8 @@
   (ds/spec
    {:name :tada/event
     :spec {(ds/opt :params) {keyword? (ds/or {:keyword keyword?
-                                     :fn fn?
-                                     :spec s/spec?})}
+                                              :fn fn?
+                                              :spec s/spec?})}
            (ds/opt :conditions) fn? ;; :tada/condition-fn
            (ds/opt :effect) fn?
            (ds/opt :return) fn?}}))
@@ -47,7 +47,10 @@
 
 (defn register!
   [events]
-  {:pre [(every? (partial s/valid? :tada/event) events)]
+  {:pre [(every? (fn [event] (if (s/valid? :tada/event event)
+                               true
+                               (do (s/explain :tada/event event)
+                                   false))) events)]
    :post [(s/valid? :tada/events @event-store)]}
   (swap! event-store merge (->> events
                                 (map (fn [event]
