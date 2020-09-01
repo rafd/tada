@@ -28,7 +28,7 @@
 (s/def :tada/event
   (ds/spec
    {:name :tada/event
-    :spec {:params {keyword? (ds/or {:keyword keyword?
+    :spec {(ds/opt :params) {keyword? (ds/or {:keyword keyword?
                                      :fn fn?
                                      :spec s/spec?})}
            (ds/opt :conditions) fn? ;; :tada/condition-fn
@@ -43,7 +43,7 @@
 (defn- make-event-spec
   [event]
   (ds/spec {:name (keyword "ev-spec" (name (event :id)))
-            :spec (event :params)}))
+            :spec (or (event :params) {})}))
 
 (defn register!
   [events]
