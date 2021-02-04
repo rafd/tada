@@ -16,13 +16,11 @@ tada consists of two things:
 
 ## status
 
-This library is pre-alpha, and at this stage, is meant mostly for something to discuss around.
+This library is alpha, and at this stage, is meant mostly for something to discuss around.
 
-There's not even an official release yet. (To hack on it, clone it, lein-install it and use checkouts.)
+It's being used in prod, but the "API"/syntax is likely to change a lot.
 
-The "API"/syntax is likely to change a lot, but once it stabilises, we'll cut an alpha release.
-
-So far, only events have been somewhat implemented.
+So far, only events have been implemented.
 
 
 ## tada.events
@@ -86,10 +84,10 @@ So far, only events have been somewhat implemented.
 
     :conditions
     (fn [{:keys [user-id account-id amount currency]}]
-       [[(user-exists? user-id) :forbidden "User with this id does not exist"]
-        [(account-exists? account-id) :not-found "Account with this id does not exist"]
-        [(user-owns-account? user-id account-id) :forbidden "User does not own this account"]
-        [(= currency (:currency (get-account account-id))) :incorrect "Deposit currency must match account"]])
+       [[#(user-exists? user-id) :forbidden "User with this id does not exist"]
+        [#(account-exists? account-id) :not-found "Account with this id does not exist"]
+        [#(user-owns-account? user-id account-id) :forbidden "User does not own this account"]
+        [#(= currency (:currency (get-account account-id))) :incorrect "Deposit currency must match account"]])
 
     :effect
     (fn [{:keys [account-id amount]}]
@@ -108,13 +106,13 @@ So far, only events have been somewhat implemented.
 
     :conditions
     (fn [{:keys [user-id from-account-id to-account-id amount]}]
-       [[(user-exists? user-id) :forbidden "User with this id does not exist"]
-        [(account-exists? to-account-id) :not-found "Account with this id does not exist"]
-        [(user-owns-account? user-id from-account-id) :forbidden "User does not own this account"]
-        [(account-exists? from-account-id) :incorrect "Account with this id does not exist"]
-        [(>= (:balance (get-account from-account-id)) amount) :conflict "Insufficient funds in account"]
-        [(= (:currency (get-account from-account-id))
-            (:currency (get-account to-account-id))) :conflict "Currency of accounts must match"]])
+       [[#(user-exists? user-id) :forbidden "User with this id does not exist"]
+        [#(account-exists? to-account-id) :not-found "Account with this id does not exist"]
+        [#(user-owns-account? user-id from-account-id) :forbidden "User does not own this account"]
+        [#(account-exists? from-account-id) :incorrect "Account with this id does not exist"]
+        [#(>= (:balance (get-account from-account-id)) amount) :conflict "Insufficient funds in account"]
+        [#(= (:currency (get-account from-account-id))
+             (:currency (get-account to-account-id))) :conflict "Currency of accounts must match"]])
 
     :effect
     (fn [{:keys [from-account-id to-account-id amount]}]

@@ -21,7 +21,7 @@
            :args (s/cat :arg map?)
            :ret (s/coll-of
                  (s/cat
-                  :status boolean?
+                  :status fn? ;; that returns a boolean
                   :anomaly keyword?
                   :message string?)))}))
 
@@ -74,17 +74,20 @@
     (when (s/valid? (event :params-spec) coerced-params)
       coerced-params)))
 
-(defn- rule-errors
-  "Returns boolean of whether the the conditions for an event are satisfied.
+(defn- condition-check
+  "Returns boolean of whether all of the conditions for an event are satisfied.
+   Evaluates conditions one at a time, returning the first error encountered (or nil if no errors).
    Should be called with sanitized-params."
   [event sanitized-params]
   (if (nil? (event :conditions))
     []
     (->> ((event :conditions) sanitized-params)
-         (remove (fn [[pass? _ _]] pass?))
-         (map (fn [[pass? anomaly message]]
-                {:anomaly anomaly
-                 :message message})))))
+         ;; using reduce to ensure one-at-a-time
+         (reduce (fn [memo [pass-thunk? anomaly message]]
+                   (if (pass-thunk?)
+                     nil
+                     (reduced {:anomaly anomaly
+                               :message message}))) nil))))
 
 (defn explain-params-errors [spec value]
   (->> (s/explain-data spec value)
@@ -102,16 +105,16 @@
 (defn do! [event-id params]
   (if-let [event (@event-store event-id)]
     (if-let [sanitized-params (sanitize-params event params)]
-      (let [errors (rule-errors event sanitized-params)]
-        (if (empty? errors)
+      (let [error (condition-check event sanitized-params)]
+        (if (nil? error)
           (let [effect-return (when (event :effect)
                                 ((event :effect) sanitized-params))]
             (if (event :return)
               ((event :return) (assoc sanitized-params
                                       :tada/effect-return effect-return))
               nil))
-          (throw (ex-info (str "Conditions for event " event-id " are not met:\n"
-                               (string/join "\n" (map :message errors)))
+          (throw (ex-info (str "Condition for event " event-id " is not met:\n"
+                               (:message error))
                           {:anomaly :incorrect}))))
       (throw (ex-info (str "Params for event " event-id " do not meet spec:\n"
                            (explain-params-errors (event :params-spec) params))

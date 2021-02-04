@@ -21,11 +21,11 @@
         :params {:name string?
                  :value integer?}
         :conditions (fn [{:keys [name value]}]
-                      [[(or (string/starts-with? name "user-")
-                            (string/starts-with? name "system-"))
+                      [[#(or (string/starts-with? name "user-")
+                             (string/starts-with? name "system-"))
                         :incorrect
                         "Even name must begin with 'user-' or 'system-'"]
-                       [(<= 0 value) :incorrect "Value must be positive"]])
+                       [#(<= 0 value) :incorrect "Value must be positive"]])
         :effect (fn [{:keys [name value] :as arg}]
                   (swap! db conj arg))}])
     (let [handler (tada-ring/route :add-event!)]
@@ -64,11 +64,11 @@
         :params {:name string?
                  :value integer?}
         :conditions (fn [{:keys [name value]}]
-                      [[(or (string/starts-with? name "user-")
-                            (string/starts-with? name "system-"))
+                      [[#(or (string/starts-with? name "user-")
+                             (string/starts-with? name "system-"))
                         :incorrect
                         "Even name must begin with 'user-' or 'system-'"]
-                       [(<= 0 value) :incorrect "Value must be positive"]])
+                       [#(<= 0 value) :incorrect "Value must be positive"]])
         :effect (fn [{:keys [name value] :as arg}]
                   (swap! db conj arg))}])
     (let [app (ring/ring-handler

@@ -17,14 +17,14 @@
 
   (testing "Can register events with correct spec"
     (tada/register!
-     [{:id :foobar
-       :params {:a string?
-                :b :tada/event}
-       :conditions (fn [{:keys [a b]}] [true])
-       :effect (fn [{:keys [a b]}] [a b])}
+      [{:id :foobar
+        :params {:a string?
+                 :b :tada/event}
+        :conditions (fn [{:keys [a b]}] [#(constantly true)])
+        :effect (fn [{:keys [a b]}] [a b])}
       {:id :bazquux
        :params {:c (ds/spec {:name "beep" :spec {keyword? string?}})}
-       :conditions (fn [{:keys [c]}] [false])
+       :conditions (fn [{:keys [c]}] [#(constantly false)])
        :effect (fn [{:keys [c]}] c)}])
     (is (= #{:bazquux :foobar}
            (set (keys @tada/event-store)))
@@ -37,11 +37,11 @@
           [{:id "wrong"
             :params {:a string?
                      :b :tada/event}
-            :conditions (fn [{:keys [a b]}] [true])
+            :conditions (fn [{:keys [a b]}] [#(constantly true)])
             :effect (fn [{:keys [a b]}] [a b])}
            {:id :bazquux
             :params {:c (ds/spec {:name "beep" :spec {keyword? string?}})}
-            :conditions (fn [{:keys [c]}] [[false :incorrect "Complain"]])
+            :conditions (fn [{:keys [c]}] [[#(constantly false) :incorrect "Complain"]])
             :effect (fn [{:keys [c]}] c)}])))
     (is (thrown?
          java.lang.AssertionError
@@ -49,11 +49,11 @@
           [{:id :foobar
             :params {:a string?
                      :b :tada/event}
-            :conditions (fn [{:keys [a b]}] [true])
+            :conditions (fn [{:keys [a b]}] [#(constantly true)])
             :effect (fn [{:keys [a b]}] [a b])}
            {:id :bazquux
             :params {:c :some-invalid/spec}
-            :conditions (fn [{:keys [c]}] [true])
+            :conditions (fn [{:keys [c]}] [#(constantly true)])
             :effect (fn [{:keys [c]}] c)}])))))
 
 (deftest running-events
@@ -62,14 +62,14 @@
      :params {:a string?
               :b integer?}
      :conditions (fn [{:keys [a b]}]
-                   [[(string/starts-with? a "a") :incorrect "A must start with 'a'"]
-                    [(even? b) :incorrect "B must be even"]])
+                   [[#(string/starts-with? a "a") :incorrect "A must start with 'a'"]
+                    [#(even? b) :incorrect "B must be even"]])
      :effect (fn [{:keys [a b]}] (pr [a b]))
      :return (fn [_] true)}
     {:id :bazquux
      :params {:c (ds/spec {:name "beep" :spec {keyword? string?}})}
      :conditions (fn [{:keys [c]}]
-                   [[(< 2 (count (keys c))) :incorrect
+                   [[#(< 2 (count (keys c))) :incorrect
                      "C must have at least two keys"]])
      :effect (fn [{:keys [c]}] c)}])
 
@@ -102,15 +102,36 @@
         (is (= :incorrect (:anomaly (ex-data ex))))
         (is (string/starts-with?
              (.getMessage ex)
-             "Conditions for event "))))
+             "Condition for event "))))
     (try
       (tada/do! :foobar {:a "aoeu" :b 3})
       (catch clojure.lang.ExceptionInfo ex
         (is (= :incorrect (:anomaly (ex-data ex))))
         (is (string/starts-with?
              (.getMessage ex)
-             "Conditions for event ")))))
+             "Condition for event ")))))
 
   (testing "Calling with correct arguments works"
     (let [out (with-out-str (is (= true (tada/do! :foobar {:a "aoeu" :b 2}))))]
       (is (= (pr-str ["aoeu" 2]) out)))))
+
+(deftest one-by-one-conditions
+  (let [side-effects (atom #{})]
+    (tada/register!
+      [{:id :foobar
+        :params {:a string?
+                 :b integer?}
+        :conditions (fn [{:keys [a b]}]
+                      [[#(do
+                           (swap! side-effects conj :a)
+                           (string/starts-with? a "a")) :incorrect "A must start with 'a'"]
+                       [#(do
+                           (swap! side-effects conj :b)
+                           (even? b)) :incorrect "B must be even"]])
+        :effect (fn [{:keys [a b]}] (pr [a b]))}])
+
+    (testing "If a condition fails, subsequent conditions are not checked"
+      (try
+        (tada/do! :foobar {:a "xoobar" :b 3})
+        (catch clojure.lang.ExceptionInfo _))
+      (is (= @side-effects #{:a})))))
