@@ -64,7 +64,8 @@
      :conditions (fn [{:keys [a b]}]
                    [[(string/starts-with? a "a") :incorrect "A must start with 'a'"]
                     [(even? b) :incorrect "B must be even"]])
-     :effect (fn [{:keys [a b]}] (pr [a b]))}
+     :effect (fn [{:keys [a b]}] (pr [a b]))
+     :return (fn [_] true)}
     {:id :bazquux
      :params {:c (ds/spec {:name "beep" :spec {keyword? string?}})}
      :conditions (fn [{:keys [c]}]
@@ -85,14 +86,14 @@
         (is (= :incorrect (:anomaly (ex-data ex))))
         (is (string/starts-with?
              (.getMessage ex)
-             "Event params do not meet spec:"))))
+             "Params for event "))))
     (try
       (tada/do! :foobar {:b 5})
       (catch clojure.lang.ExceptionInfo ex
         (is (= :incorrect (:anomaly (ex-data ex))))
         (is (string/starts-with?
              (.getMessage ex)
-             "Event params do not meet spec:")))))
+             "Params for event ")))))
 
   (testing "Calling event with params violating conditions throws"
     (try
@@ -101,14 +102,14 @@
         (is (= :incorrect (:anomaly (ex-data ex))))
         (is (string/starts-with?
              (.getMessage ex)
-             "Event conditions are not met:"))))
+             "Conditions for event "))))
     (try
       (tada/do! :foobar {:a "aoeu" :b 3})
       (catch clojure.lang.ExceptionInfo ex
         (is (= :incorrect (:anomaly (ex-data ex))))
         (is (string/starts-with?
              (.getMessage ex)
-             "Event conditions are not met:")))))
+             "Conditions for event ")))))
 
   (testing "Calling with correct arguments works"
     (let [out (with-out-str (is (= true (tada/do! :foobar {:a "aoeu" :b 2}))))]
