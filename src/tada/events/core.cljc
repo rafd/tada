@@ -30,7 +30,8 @@
    {:name :tada/event
     :spec {(ds/opt :params) {keyword? (ds/or {:keyword keyword?
                                               :fn fn?
-                                              :spec s/spec?})}
+                                              :spec s/spec?
+                                              :vector vector?})}
            (ds/opt :conditions) fn? ;; :tada/condition-fn
            (ds/opt :effect) fn?
            (ds/opt :return) fn?}}))
