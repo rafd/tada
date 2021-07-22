@@ -31,6 +31,7 @@
     :spec {(ds/opt :params) {keyword? (ds/or {:keyword keyword?
                                               :fn fn?
                                               :spec s/spec?
+                                              :set set?
                                               :vector vector?})}
            (ds/opt :conditions) fn? ;; :tada/condition-fn
            (ds/opt :effect) fn?
