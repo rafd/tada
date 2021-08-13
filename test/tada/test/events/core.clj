@@ -113,7 +113,15 @@
 
   (testing "Calling with correct arguments works"
     (let [out (with-out-str (is (= true (tada/do! :foobar {:a "aoeu" :b 2}))))]
-      (is (= (pr-str ["aoeu" 2]) out)))))
+      (is (= (pr-str ["aoeu" 2]) out))))
+
+
+  (testing "Events with no condition work"
+    (tada/register!
+      [{:id :no-conditions
+        :params {:a string?}
+        :return (fn [_] true)}])
+    (is (= true (tada/do! :no-conditions {:a "asd"})))))
 
 (deftest one-by-one-conditions
   (let [side-effects (atom #{})]

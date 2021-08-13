@@ -76,12 +76,11 @@
       coerced-params)))
 
 (defn- condition-check
-  "Returns boolean of whether all of the conditions for an event are satisfied.
-   Evaluates conditions one at a time, returning the first error encountered (or nil if no errors).
+  "Evaluates conditions one at a time, returning the first error encountered (or nil if no errors).
    Should be called with sanitized-params."
   [event sanitized-params]
   (if (nil? (event :conditions))
-    []
+    nil
     (->> ((event :conditions) sanitized-params)
          ;; using reduce to ensure one-at-a-time
          (reduce (fn [memo [pass-thunk? anomaly message]]
