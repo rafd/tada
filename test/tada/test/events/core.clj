@@ -121,7 +121,13 @@
       [{:id :no-conditions
         :params {:a string?}
         :return (fn [_] true)}])
-    (is (= true (tada/do! :no-conditions {:a "asd"})))))
+    (is (= true (tada/do! :no-conditions {:a "asd"}))))
+
+  (testing "Events with no conditions, no params work"
+    (tada/register!
+      [{:id :no-conditions-no-params
+        :return (fn [_] true)}])
+    (is (= true (tada/do! :no-conditions-no-params {})))))
 
 (deftest one-by-one-conditions
   (let [side-effects (atom #{})]
