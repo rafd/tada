@@ -30,6 +30,21 @@
            (set (keys @tada/event-store)))
         "Ids of event should be keys of events map"))
 
+  (testing "Can register with :tada/effect-return as :return value"
+    (tada/register!
+      [{:id :effect-return-keyword
+        :effect (fn [_] true)
+        :return :tada/effect-return}])
+    (is (= true (tada/do! :effect-return-keyword {}))))
+
+  (testing "Incorrect :return value throws"
+    (is (thrown?
+          java.lang.AssertionError
+          (tada/register!
+            [{:id :bad-effect-return
+              :effect (fn [_] true)
+              :return true}]))))
+
   (testing "Trying to register invalid events fails"
     (is (thrown?
          java.lang.AssertionError

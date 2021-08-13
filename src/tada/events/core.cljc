@@ -35,7 +35,7 @@
                                               :vector vector?})}
            (ds/opt :conditions) fn? ;; :tada/condition-fn
            (ds/opt :effect) fn?
-           (ds/opt :return) fn?}}))
+           (ds/opt :return) ifn?}}))
 
 (s/def :tada/events
   (ds/spec
