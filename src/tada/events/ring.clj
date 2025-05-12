@@ -2,9 +2,9 @@
   (:require
     [tada.events.core :as tada]))
 
-(defn ring-dispatch-event! [event-id event-params]
+(defn ring-dispatch-event! [t event-id event-params]
   (try
-    (if-let [return (tada/do! event-id event-params)]
+    (if-let [return (tada/do! t event-id event-params)]
       {:status 200
        :body return}
       {:status 200})
@@ -19,6 +19,6 @@
                  ;; rethrow the exception
                  (throw e))})))
 
-(defn route [event-id]
+(defn route [t event-id]
   (fn [request]
-    (ring-dispatch-event! event-id (request :params))))
+    (ring-dispatch-event! t event-id (request :params))))

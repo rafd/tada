@@ -25,6 +25,8 @@ So far, only events have been implemented.
 
 ## tada.events
 
+(Event params can be checked by spec-tools or malli specs, depending on what option `tada/init` is called with)
+
 ### example
 
 ```clojure
@@ -120,28 +122,29 @@ So far, only events have been implemented.
 
 
 ;; register our events
+(defonce t (tada/init :spec-tools))
 
-(tada/register! events)
+(tada/register! t events)
 
 ;; and then we can dispatch them with do!
 
 ;; when we call with everything correct, it runs the effect
-(tada/do! :deposit! {:user-id #uuid "..."
-                     :account-id #uuid "..."
-                     :amount 100
-                     :currency :CAD})
+(tada/do! t :deposit! {:user-id #uuid "..."
+                      :account-id #uuid "..."
+                      :amount 100
+                      :currency :CAD})
 
 ;; if called with invalid arguments, an error is raised
-(tada/do! :deposit! {:user-id #uuid "..."
-                     :account-id #uuid "..."
-                     :currency :CAD})
+(tada/do! t :deposit! {:user-id #uuid "..."
+                      :account-id #uuid "..."
+                      :currency :CAD})
 ;; => error: "Missing amount"
 
 ;; if conditions aren't met, also raises an error
-(tada/do! :transfer! {:user-id #uuid "..."
-                      :from-account-id #uuid "..."
-                      :to-account-id #uuid "..."
-                      :amount 100})
+(tada/do! t :transfer! {:user-id #uuid "..."
+                       :from-account-id #uuid "..."
+                       :to-account-id #uuid "..."
+                       :amount 100})
 ;; => error: "Insufficient Funds in Account"
 
 ```
@@ -167,9 +170,9 @@ Below, we're using reitit to route these events:
     (reitit.ring/router
       ["/api"
         ["/transfer"
-          {:post {:handler (tada.events.ring/route :add-event!)}}]
+          {:post {:handler (tada.events.ring/route t :add-event!)}}]
         ["/deposit"
-          {:post {:handler (tada.events.ring/route :deposit!)}}]])))
+          {:post {:handler (tada.events.ring/route t :deposit!)}}]])))
 
 ;; plus some middleware to insert the authenticated user-id into params
 ```

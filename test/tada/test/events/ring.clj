@@ -6,17 +6,11 @@
    [tada.events.ring :as tada-ring]
    [reitit.ring :as ring]))
 
-(defn- event-fixture
-  [f]
-  (reset! tada/event-store {})
-  (f)
-  (reset! tada/event-store {}))
-
-(use-fixtures :each event-fixture)
-
 (deftest requesting-events
-  (let [db (atom [])]
+  (let [db (atom [])
+        t (tada/init :malli)]
     (tada/register!
+      t
       [{:id :add-event!
         :params {:name string?
                  :value integer?}
@@ -28,7 +22,7 @@
                        [#(<= 0 value) :incorrect "Value must be positive"]])
         :effect (fn [{:keys [name value] :as arg}]
                   (swap! db conj arg))}])
-    (let [handler (tada-ring/route :add-event!)]
+    (let [handler (tada-ring/route t :add-event!)]
       (testing "Can call the handler"
         (is (= {:status 200}
                (handler {:params {:name "user-thing"
@@ -58,8 +52,10 @@
                @db))))))
 
 (deftest routing-with-reitit
-  (let [db (atom [])]
+  (let [db (atom [])
+        t (tada/init :malli)]
     (tada/register!
+      t
       [{:id :add-event!
         :params {:name string?
                  :value integer?}
@@ -75,7 +71,7 @@
                 (ring/router
                   ["/api"
                    ["/event"
-                    {:post {:handler (tada-ring/route :add-event!)}}]]))]
+                    {:post {:handler (tada-ring/route t :add-event!)}}]]))]
       (testing "Can call the handler"
         (is (= {:status 200}
                (app {:request-method :post
