@@ -2,10 +2,8 @@
   :description "A clojure(script) library that helps you compose web-applications out of declarative data-driven parts"
   :url "https://github.com/rafd/tada"
   :license {:name "MIT"}
-  :dependencies [[org.clojure/clojure "1.9.0"]
-                 [metosin/spec-tools "0.10.0"]
-                 [org.clojure/core.match "0.3.0"]
-                 [org.clojure/test.check "0.10.0"]]
+  :dependencies [[org.clojure/clojure "1.11.3"]
+                 [metosin/malli "0.16.2"]]
 
   :plugins [[com.roomkey/lein-v "7.0.0"]]
 

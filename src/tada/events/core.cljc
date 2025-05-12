@@ -1,69 +1,78 @@
 (ns tada.events.core
   (:require
-   [clojure.spec.alpha :as s]
-   [clojure.string :as string]
-   [clojure.core.match :as match]
-   [spec-tools.core :as st]
-   [spec-tools.data-spec :as ds]))
+   [malli.core :as m]
+   [malli.transform :as mt]
+   [malli.error :as me]
+   [malli.experimental.lite :as ml]))
 
 (defonce event-store (atom {}))
 
-;; Providing spec for documentation purposes, but not hooking it up
-;; since it tries to generative test the functions, which isn't
-;; necessarily always desired; additionally, we also know that the
-;; condition function will always get input that corresponds to the
-;; params spec, but that spec isn't created until after being checked
-;; against this
-(s/def :tada/condition-fn
-  (ds/spec
-   {:name :tada/condition-fn
-    :spec (s/fspec
-           :args (s/cat :arg map?)
-           :ret (s/coll-of
-                 (s/cat
-                  :status fn? ;; that returns a boolean
-                  :anomaly keyword?
-                  :message string?)))}))
+(def Event
+  [:map
+   [:id :keyword]
+   [:params {:optional true}
+    [:map-of
+     :keyword
+     ;; no "meta-schema" exists yet
+     ;; https://github.com/metosin/malli/issues/904
+     :any]]
+    ;; takes map of params, returns array of [no-arg-predicate-fn anomaly message]
+    [:conditions {:optional true} fn?]
+    ;; takes map of params, can return anything
+    [:effect {:optional true} fn?]
+    ;; either keyword or function that takes params + special param
+    [:return {:optional true} ifn?]])
 
-(s/def :tada/event
-  (ds/spec
-   {:name :tada/event
-    :spec {(ds/opt :params) {keyword? (ds/or {:keyword keyword?
-                                              :fn fn?
-                                              :spec s/spec?
-                                              :set set?
-                                              :vector vector?})}
-           (ds/opt :conditions) fn? ;; :tada/condition-fn
-           (ds/opt :effect) fn?
-           (ds/opt :return) ifn?}}))
-
-(s/def :tada/events
-  (ds/spec
-   {:name :tada/events
-    :spec {keyword? :tada/event}}))
-
-(defn- make-event-spec
+(defn- make-validator
   [event]
-  (ds/spec {:name (keyword "ev-spec" (name (event :id)))
-            :spec (or (event :params) {})}))
+  (m/validator
+    (ml/schema (or (event :params) {}))))
+
+(defn- make-schema
+  [{:keys [params]}]
+  (cond
+    (nil? params)
+    (m/schema :map)
+
+    (map? params)
+    (ml/schema params)
+    #_(into [:map] (map ml/-entry params))
+
+    :else
+    (m/schema params)))
+
+#_(make-schema {:params nil})
+#_(make-schema {:params [:map
+                         [:foo :string]]})
+#_(make-schema {:params {:a :string}})
+
+(def transformer
+  (mt/transformer
+    mt/string-transformer
+    mt/strip-extra-keys-transformer))
+
+(defn- make-coercer
+ [event]
+ (m/coercer (make-schema event) transformer))
 
 (defn register!
   [events]
-  {:pre [(every? (fn [event] (if (s/valid? :tada/event event)
-                               true
-                               (do (s/explain :tada/event event)
-                                   false))) events)]
-   :post [(s/valid? :tada/events @event-store)]}
+  {:pre [(every? (fn [event]
+                   (or (m/validate Event event)
+                       (do (println
+                             "Event did not pass validation:\n"
+                             event "\n"
+                             (me/humanize (m/explain Event event)))
+                           false)))
+                 events)]
+   :post [(m/validate [:map-of :keyword Event] @event-store)]}
   (swap! event-store merge (->> events
                                 (map (fn [event]
-                                       [(event :id) (assoc event :params-spec (make-event-spec event))]))
+                                       [(event :id) (assoc event
+                                                      ::coercer (make-coercer event)
+                                                      ::validator (make-validator event)
+                                                      ::schema (make-schema event))]))
                                 (into {}))))
-
-(def transformer
-  (st/type-transformer
-   st/string-transformer
-   st/strip-extra-keys-transformer
-   st/strip-extra-values-transformer))
 
 (defn- sanitize-params
   "Given a params-spec and params,
@@ -71,9 +80,13 @@
      (eliding any extra keys and values)
    if params do not pass spec, returns nil"
   [event params]
-  (let [coerced-params (st/coerce (event :params-spec) params transformer)]
-    (when (s/valid? (event :params-spec) coerced-params)
-      coerced-params)))
+  ;; catching malli exceptions here
+  ;; because do! will throw anyway if this fn returns nil
+  (try
+    (let [coerced-params ((event ::coercer) params)]
+      (when ((event ::validator) coerced-params)
+        coerced-params))
+    (catch clojure.lang.ExceptionInfo _)))
 
 (defn- condition-check
   "Evaluates conditions one at a time, returning the first error encountered (or nil if no errors).
@@ -82,25 +95,18 @@
   (if (nil? (event :conditions))
     nil
     (->> ((event :conditions) sanitized-params)
+         (map-indexed vector)
          ;; using reduce to ensure one-at-a-time
-         (reduce (fn [memo [pass-thunk? anomaly message]]
+         (reduce (fn [_ [index [pass-thunk? anomaly message]]]
                    (if (pass-thunk?)
                      nil
-                     (reduced {:anomaly anomaly
+                     (reduced {:index index
+                               :anomaly anomaly
                                :message message}))) nil))))
 
 (defn explain-params-errors [spec value]
-  (->> (s/explain-data spec value)
-       ::s/problems
-       (map (fn [{:keys [path pred val via in]}]
-              (match/match [pred]
-                [([fn [_] ([contains? _ missing-key] :seq)] :seq)] {:issue :missing-key
-                                                                    :key-path (conj path missing-key)}
-                [_] {:issue :incorrect-value
-                     :key-path path})))
-       (map (fn [{:keys [issue key-path]}]
-              (str key-path " " issue)))
-       (string/join "\n")))
+  (->> (m/explain spec value)
+       me/humanize))
 
 (defn do! [event-id params]
   (if-let [event (@event-store event-id)]
@@ -115,9 +121,10 @@
               nil))
           (throw (ex-info (str "Condition for event " event-id " is not met:\n"
                                (:message error))
-                          {:anomaly :incorrect}))))
+                          {:error error
+                           :anomaly :incorrect}))))
       (throw (ex-info (str "Params for event " event-id " do not meet spec:\n"
-                           (explain-params-errors (event :params-spec) params))
+                           (explain-params-errors (event ::schema) params))
                       {:anomaly :incorrect})))
     (throw (ex-info (str "No event with id " event-id)
                     {:event-id event-id
