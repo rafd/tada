@@ -1,5 +1,7 @@
 # tada
 
+[![Clojars Project](https://img.shields.io/clojars/v/tada.svg)](https://clojars.org/tada)
+
 tada is a clojure(script) library that helps you compose web-applications out of declarative data-driven parts.
 
 tada consists of two things:
