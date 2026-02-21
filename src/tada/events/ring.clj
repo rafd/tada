@@ -10,6 +10,7 @@
       {:status 200})
     (catch clojure.lang.ExceptionInfo e
       {:body (.getMessage e)
+       :headers {"Content-Type" "text/plain"}
        :status (case (:anomaly (ex-data e))
                  :incorrect 400
                  :forbidden 403
