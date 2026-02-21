@@ -20,8 +20,7 @@
 
 (s/def ::spec any?)
 
-(s/def ::params
-       (s/map-of keyword? ::spec))
+(s/def ::params any?)
 
 (s/def ::conditions fn?) ;; ::condition-fn
 (s/def ::effect fn?)
